@@ -1,0 +1,9 @@
+[package]
+name = "free-space-wipe"
+version = "0.1.0"
+authors = ["Phillip Couto <phillip@couto.in>"]
+
+[dependencies]
+clap = "2.16.4"
+rand = "0.3.14"
+libc = "0.2.17"
