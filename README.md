@@ -6,6 +6,8 @@ the operating system responds with an out of space error.
 ## Implemented Procedures
 - [CSE-ITSG-06](https://www.cse-cst.gc.ca/en/node/270/html/10572)
 
+## Supported Operating Systems
+- unix (macOS, linux, etc)
 
 ## DISCLAIMER
 This utility does not provide a 100% guarantee to data erasure located in areas
