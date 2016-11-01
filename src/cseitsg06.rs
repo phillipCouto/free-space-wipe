@@ -22,24 +22,29 @@ pub fn execute() {
     file_opts.custom_flags(libc::O_SYNC);
 
     let file_result = file_opts.open(filepath);
-
     if file_result.is_err() {
         println!("failed to create / open file {:?}, error: {:?}",
                  filepath,
                  file_result.err().unwrap());
         return;
     }
+
+    // Pass 1 - write zeros
     let mut file = file_result.unwrap();
     let mut result = pass1(&mut file);
     if result.is_err() {
         println!("first pass failed, error: {:?}", result.err().unwrap());
         return;
     }
+
+    // Pass 2 - write ones
     result = pass2(&mut file);
     if result.is_err() {
         println!("second pass failed, error: {:?}", result.err().unwrap());
         return;
     }
+
+    // Pass 3 - write a random number from 0 to 255 and verify the write
     result = pass3(&mut file);
     if result.is_err() {
         println!("third pass failed, error: {:?}", result.err().unwrap());
@@ -50,8 +55,8 @@ pub fn execute() {
 fn pass1(mut f: &mut File) -> Result<()> {
     let start = Instant::now();
     let buffer = [0; DEFAULT_BUFFER_SIZE];
+
     let count = try!(chunk_writes(&buffer, &mut f, false));
-    try!(f.flush());
     try!(f.sync_all());
     println!("pass 1: wrote {:?} bytes of 0s in {:?} seconds",
              count,
@@ -63,6 +68,7 @@ fn pass2(mut f: &mut File) -> Result<()> {
     try!(f.seek(SeekFrom::Start(0)));
     let start = Instant::now();
     let buffer = [0; DEFAULT_BUFFER_SIZE];
+
     let count = try!(chunk_writes(&buffer, &mut f, false));
     try!(f.sync_all());
     println!("pass 2: wrote {:?} bytes of 1s in {:?} seconds",
@@ -94,7 +100,7 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
     while ok {
         let res = f.write(&buf);
         ok = res.is_ok();
-        if res.is_ok() {
+        if !res.is_ok() {
             let written = res.unwrap();
             if verify {
                 try!(f.sync_data());
