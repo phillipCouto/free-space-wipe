@@ -1,5 +1,6 @@
 use libc;
 use std::u8;
+use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 use std::os::unix::fs::OpenOptionsExt;
@@ -37,11 +38,21 @@ pub fn execute() {
         println!("first pass failed, error: {:?}", result.err().unwrap());
         return;
     }
+    result = fs::remove_file(filepath);
+    if result.is_err() {
+        println!("first pass failed, error: {:?}", result.err().unwrap());
+        return;
+    }
 
     // Pass 2 - write ones
     result = pass2(&mut file);
     if result.is_err() {
         println!("second pass failed, error: {:?}", result.err().unwrap());
+        return;
+    }
+    result = fs::remove_file(filepath);
+    if result.is_err() {
+        println!("first pass failed, error: {:?}", result.err().unwrap());
         return;
     }
 
