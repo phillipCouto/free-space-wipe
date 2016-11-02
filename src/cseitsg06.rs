@@ -98,6 +98,7 @@ fn pass3(mut f: &mut File) -> Result<()> {
 fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
     let mut count: u64 = 0;
     let mut ok: bool = true;
+    println!("starting pass writing");
     while ok {
         let res = f.write(&buf);
         ok = res.is_ok();
@@ -113,9 +114,10 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
         try!(f.flush());
         try!(f.sync_all());
     }
+    println!("completed pass writing");
 
     if verify {
-        println!("reading");
+        println!("starting pass verification");
         // Read from the beginning verifying the content
         let mut rbuf = [0; DEFAULT_BUFFER_SIZE];
         ok = true;
@@ -131,6 +133,7 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
                 ok = false;
             }
         }
+        println!("completed pass verification");
     }
     Ok(count)
 }
