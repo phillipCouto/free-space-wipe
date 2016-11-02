@@ -1,4 +1,5 @@
 extern crate clap;
+extern crate libc;
 extern crate rand;
 
 use clap::{Arg, App};

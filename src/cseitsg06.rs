@@ -1,7 +1,9 @@
+use libc;
 use std::u8;
 use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 use std::time::Instant;
+use std::os::unix::fs::OpenOptionsExt;
 
 use rand;
 
@@ -16,6 +18,9 @@ pub fn execute() {
     file_opts.write(true);
     file_opts.create(true);
     file_opts.truncate(true);
+
+    println!("opening file with O_SYNC");
+    file_opts.custom_flags(libc::O_SYNC);
 
     let file_result = file_opts.open(filepath);
     if file_result.is_err() {
@@ -53,7 +58,6 @@ fn pass1(mut f: &mut File) -> Result<()> {
     let buffer = [0; DEFAULT_BUFFER_SIZE];
 
     let count = try!(chunk_writes(&buffer, &mut f, false));
-    try!(f.sync_all());
     println!("pass 1: wrote {:?} bytes of 0s in {:?} seconds",
              count,
              start.elapsed().as_secs());
@@ -61,12 +65,13 @@ fn pass1(mut f: &mut File) -> Result<()> {
 }
 
 fn pass2(mut f: &mut File) -> Result<()> {
+    try!(f.seek(SeekFrom::Start(0)));
     try!(f.set_len(0));
+
     let start = Instant::now();
     let buffer = [u8::MAX; DEFAULT_BUFFER_SIZE];
 
     let count = try!(chunk_writes(&buffer, &mut f, false));
-    try!(f.sync_all());
     println!("pass 2: wrote {:?} bytes of 1s in {:?} seconds",
              count,
              start.elapsed().as_secs());
@@ -74,13 +79,14 @@ fn pass2(mut f: &mut File) -> Result<()> {
 }
 
 fn pass3(mut f: &mut File) -> Result<()> {
+    try!(f.seek(SeekFrom::Start(0)));
     try!(f.set_len(0));
+
     let start = Instant::now();
     let num = rand::random::<u8>();
     let buffer = [num; DEFAULT_BUFFER_SIZE];
 
     let count = try!(chunk_writes(&buffer, &mut f, true));
-    try!(f.sync_all());
     println!("pass 3: wrote {:?} bytes of {:?} in {:?} seconds",
              count,
              num,
@@ -92,21 +98,11 @@ fn pass3(mut f: &mut File) -> Result<()> {
 fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
     let mut count: u64 = 0;
     let mut ok: bool = true;
-    let mut rbuf = [0; DEFAULT_BUFFER_SIZE];
     while ok {
         let res = f.write(&buf);
         ok = res.is_ok();
         if ok {
             let written = res.unwrap();
-            if verify {
-                try!(f.sync_data());
-                try!(f.seek(SeekFrom::Current(written as i64 * -1)));
-                let read = try!(f.read(&mut rbuf[..written]));
-                if written != read || buf[..written] != rbuf[..read] {
-                    return Err(Error::new(ErrorKind::InvalidData,
-                                          "data read does not match what was written"));
-                }
-            }
             count += written as u64;
         } else {
             let e = res.err().unwrap();
@@ -114,7 +110,27 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
                 return Err(e);
             }
         }
+        try!(f.flush());
         try!(f.sync_all());
+    }
+
+    if verify {
+        println!("reading");
+        // Read from the beginning verifying the content
+        let mut rbuf = [0; DEFAULT_BUFFER_SIZE];
+        ok = true;
+        try!(f.seek(SeekFrom::Start(0)));
+        while ok {
+            let read = try!(f.read(&mut rbuf));
+            if buf[..read] != rbuf[..read] {
+                return Err(Error::new(ErrorKind::InvalidData,
+                                      "data read does not match what was written"));
+            }
+            // We have reached the end of the file
+            if read < rbuf.len() {
+                ok = false;
+            }
+        }
     }
     Ok(count)
 }
