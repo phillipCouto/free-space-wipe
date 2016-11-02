@@ -1,9 +1,6 @@
-use libc;
 use std::u8;
-use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
-use std::os::unix::fs::OpenOptionsExt;
 use std::time::Instant;
 
 use rand;
@@ -20,9 +17,6 @@ pub fn execute() {
     file_opts.create(true);
     file_opts.truncate(true);
 
-    println!("using O_SYNC option with file");
-    file_opts.custom_flags(libc::O_SYNC);
-
     let file_result = file_opts.open(filepath);
     if file_result.is_err() {
         println!("failed to create / open file {:?}, error: {:?}",
@@ -38,21 +32,11 @@ pub fn execute() {
         println!("first pass failed, error: {:?}", result.err().unwrap());
         return;
     }
-    result = fs::remove_file(filepath);
-    if result.is_err() {
-        println!("first pass failed, error: {:?}", result.err().unwrap());
-        return;
-    }
 
     // Pass 2 - write ones
     result = pass2(&mut file);
     if result.is_err() {
         println!("second pass failed, error: {:?}", result.err().unwrap());
-        return;
-    }
-    result = fs::remove_file(filepath);
-    if result.is_err() {
-        println!("first pass failed, error: {:?}", result.err().unwrap());
         return;
     }
 
@@ -77,7 +61,7 @@ fn pass1(mut f: &mut File) -> Result<()> {
 }
 
 fn pass2(mut f: &mut File) -> Result<()> {
-    try!(f.seek(SeekFrom::Start(0)));
+    try!(f.set_len(0));
     let start = Instant::now();
     let buffer = [u8::MAX; DEFAULT_BUFFER_SIZE];
 
@@ -90,7 +74,7 @@ fn pass2(mut f: &mut File) -> Result<()> {
 }
 
 fn pass3(mut f: &mut File) -> Result<()> {
-    try!(f.seek(SeekFrom::Start(0)));
+    try!(f.set_len(0));
     let start = Instant::now();
     let num = rand::random::<u8>();
     let buffer = [num; DEFAULT_BUFFER_SIZE];

@@ -1,9 +1,8 @@
 [package]
 name = "free-space-wipe"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Phillip Couto <phillip@couto.in>"]
 
 [dependencies]
-clap = "2.17.0"
+clap = "2.17.1"
 rand = "0.3.14"
-libc = "0.2.17"
