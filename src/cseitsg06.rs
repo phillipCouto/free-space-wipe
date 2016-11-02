@@ -1,4 +1,5 @@
 use libc;
+use std::u8;
 use std::fs::{File, OpenOptions};
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 use std::os::unix::fs::OpenOptionsExt;
@@ -67,7 +68,7 @@ fn pass1(mut f: &mut File) -> Result<()> {
 fn pass2(mut f: &mut File) -> Result<()> {
     try!(f.seek(SeekFrom::Start(0)));
     let start = Instant::now();
-    let buffer = [0; DEFAULT_BUFFER_SIZE];
+    let buffer = [u8::MAX; DEFAULT_BUFFER_SIZE];
 
     let count = try!(chunk_writes(&buffer, &mut f, false));
     try!(f.sync_all());
@@ -100,7 +101,7 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
     while ok {
         let res = f.write(&buf);
         ok = res.is_ok();
-        if !res.is_ok() {
+        if ok {
             let written = res.unwrap();
             if verify {
                 try!(f.sync_data());
@@ -113,7 +114,6 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
             }
             count += written as u64;
         } else {
-            ok = false;
             let e = res.err().unwrap();
             if !is_out_of_space_error(&e) {
                 return Err(e);
