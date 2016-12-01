@@ -1,7 +1,17 @@
 [package]
 name = "free-space-wipe"
 version = "1.0.0"
-authors = ["Phillip Couto <phillip@couto.in>"]
+authors = ["Phillip Couto <pcouto@eckler.ca>"]
+description = "This is a utility to securely erase free space using a specification"
+keywords = ["free", "space", "securely", "erase", "cseitsg-06"]
+license = "GPL-3.0"
+homepage = "https://github.com/phillipCouto/free-space-wipe"
+repository = "https://github.com/phillipCouto/free-space-wipe"
+readme = "README.md"
+
+[[bin]]
+name = "free-space-wipe"
+path = "src/main.rs"
 
 [dependencies]
 clap = "2.17.1"
