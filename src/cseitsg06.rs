@@ -34,21 +34,21 @@ pub fn execute() {
     let mut file = file_result.unwrap();
     let mut result = pass1(&mut file);
     if result.is_err() {
-        println!("first pass failed, error: {:?}", result.err().unwrap());
+        println!("first pass failed, error: {:?}", result.err());
         return;
     }
 
     // Pass 2 - write ones
     result = pass2(&mut file);
     if result.is_err() {
-        println!("second pass failed, error: {:?}", result.err().unwrap());
+        println!("second pass failed, error: {:?}", result.err());
         return;
     }
 
     // Pass 3 - write a random number from 0 to 255 and verify the write
     result = pass3(&mut file);
     if result.is_err() {
-        println!("third pass failed, error: {:?}", result.err().unwrap());
+        println!("third pass failed, error: {:?}", result.err());
         return;
     }
 }
@@ -57,7 +57,7 @@ fn pass1(mut f: &mut File) -> Result<()> {
     let start = Instant::now();
     let buffer = [0; DEFAULT_BUFFER_SIZE];
 
-    let count = try!(chunk_writes(&buffer, &mut f, false));
+    let count = chunk_writes(&buffer, &mut f, false)?;
     println!("pass 1: wrote {:?} bytes of 0s in {:?} seconds",
              count,
              start.elapsed().as_secs());
@@ -71,7 +71,7 @@ fn pass2(mut f: &mut File) -> Result<()> {
     let start = Instant::now();
     let buffer = [u8::MAX; DEFAULT_BUFFER_SIZE];
 
-    let count = try!(chunk_writes(&buffer, &mut f, false));
+    let count = chunk_writes(&buffer, &mut f, false)?;
     println!("pass 2: wrote {:?} bytes of 1s in {:?} seconds",
              count,
              start.elapsed().as_secs());
@@ -86,7 +86,7 @@ fn pass3(mut f: &mut File) -> Result<()> {
     let num = rand::random::<u8>();
     let buffer = [num; DEFAULT_BUFFER_SIZE];
 
-    let count = try!(chunk_writes(&buffer, &mut f, true));
+    let count = chunk_writes(&buffer, &mut f, true)?;
     println!("pass 3: wrote {:?} bytes of {:?} in {:?} seconds",
              count,
              num,
@@ -100,19 +100,19 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
     let mut ok: bool = true;
     println!("starting pass writing");
     while ok {
-        let res = f.write(&buf);
-        ok = res.is_ok();
-        if ok {
-            let written = res.unwrap();
-            count += written as u64;
-        } else {
-            let e = res.err().unwrap();
-            if !is_out_of_space_error(&e) {
-                return Err(e);
+        match f.write(&buf) {
+            Ok(numw) => {
+                count += numw as u64;
+            },
+            Err(e) => {
+                ok = false;
+                if !is_out_of_space_error(&e) {
+                    return Err(e);
+                }
             }
-        }
-        try!(f.flush());
-        try!(f.sync_all());
+        };
+        f.flush()?;
+        f.sync_all()?;
     }
     println!("completed pass writing");
 
@@ -121,9 +121,9 @@ fn chunk_writes(buf: &[u8], f: &mut File, verify: bool) -> Result<u64> {
         // Read from the beginning verifying the content
         let mut rbuf = [0; DEFAULT_BUFFER_SIZE];
         ok = true;
-        try!(f.seek(SeekFrom::Start(0)));
+        f.seek(SeekFrom::Start(0))?;
         while ok {
-            let read = try!(f.read(&mut rbuf));
+            let read = f.read(&mut rbuf)?;
             if buf[..read] != rbuf[..read] {
                 return Err(Error::new(ErrorKind::InvalidData,
                                       "data read does not match what was written"));
