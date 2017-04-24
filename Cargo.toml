@@ -14,6 +14,6 @@ name = "free-space-wipe"
 path = "src/main.rs"
 
 [dependencies]
-clap = "2.17.1"
-rand = "0.3.14"
-libc = "0.2.17"
+clap = "2.23.3"
+rand = "0.3.15"
+libc = "0.2.21"
